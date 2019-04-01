@@ -7,9 +7,23 @@ v = np.random.uniform(-1,1,(784,qtInter))
 w = np.random.uniform(-1,1,(qtInter,10))
 df = pd.read_csv('csvTest.csv')
 delK = np.zeros(10)
-delW = np.zeros((100,10))
 inDel = np.zeros(100)
-DeltaDelta = np.zeros(100)
+delX = np.zeros(100)
+target = np.zeros(10)
+
+def trataTarget(t) :
+    retTarget = np.zeros(10)
+    if   (t == 0) : retTarget = [1,0,0,0,0,0,0,0,0,0]
+    elif (t == 1) : retTarget = [0,1,0,0,0,0,0,0,0,0]
+    elif (t == 2) : retTarget = [0,0,1,0,0,0,0,0,0,0]
+    elif (t == 3) : retTarget = [0,0,0,1,0,0,0,0,0,0]
+    elif (t == 4) : retTarget = [0,0,0,0,1,0,0,0,0,0]
+    elif (t == 5) : retTarget = [0,0,0,0,0,1,0,0,0,0]
+    elif (t == 6) : retTarget = [0,0,0,0,0,0,1,0,0,0]
+    elif (t == 7) : retTarget = [0,0,0,0,0,0,0,1,0,0]
+    elif (t == 8) : retTarget = [0,0,0,0,0,0,0,0,1,0]
+    elif (t == 9) : retTarget = [0,0,0,0,0,0,0,0,0,1]
+    return retTarget
 
 def propag (inp, pesos) :
     soma =0
@@ -34,15 +48,19 @@ def deltaK(targetK,Yk,YinK) :
         return erro * deriv
      
 def deltaW(alpha,dK,Ze):
+    delW = np.zeros((100,10))
     for j in range(10):
         for i in range(qtInter):
             delW[i][j] = alpha * delK[j] * Z[i]
+    return delW
 
 #separa csv em dois arrays, a = input, target = target.
 for row in df.itertuples(index=False):
     a = list(row)
-    target = a.pop(0)
+    tar = a.pop(0)
 
+target = trataTarget(tar)    
+    
 #forward
 inZ = propag(a,v)
 
@@ -60,3 +78,4 @@ for i in range (10) :
 deltaW(0.2,delK,Z)
 
 #continua
+w = deltaW(0.2,delK,Z)
