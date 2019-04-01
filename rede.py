@@ -54,7 +54,8 @@ Y = funcAtivacao(inY)
 
 #calculo de erro
 for i in range (10) :
-    delK[i] = deltaK(1,Y[i],inY[i])
+    delK[i] = deltaK(target[i],Y[i],inY[i])
+    
 #backpropagation    
 deltaW(0.2,delK,Z)
 
