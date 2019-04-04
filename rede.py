@@ -31,27 +31,27 @@ def propag (inp, pesos) :
     inX = np.zeros(np.size(pesos,axis=1))
     for j in range (np.size(pesos,axis=1)):
         for i in range (qtInput):
-            soma +=(inp[i]/2550) * v[i][j]
-        inX[j] = soma
+            soma +=(inp[i]/2550) * pesos[i][j]
+        inX[j] = round(soma,4)
         soma =0
     return inX
     
 def funcAtivacao(x) :
     Ze = np.zeros(len(x))
     for i in range(len(x)):
-        Ze[i] = (2/1+ np.exp(-x[i])) -1
+        Ze[i] = round ( (2/1+ np.exp(-x[i])) -1 ,4)
     return Ze
   
 def deltaK(targetK,Yk,YinK) :
         erro = targetK - Yk
         deriv = YinK * (1 - YinK)
-        return erro * deriv
+        return round(erro * deriv,4)
      
 def deltaW(alpha,dK,Ze):
     delW = np.zeros((100,10))
     for j in range(10):
         for i in range(qtInter):
-            delW[i][j] = alpha * delK[j] * Z[i]
+            delW[i][j] = round (alpha * delK[j] * Z[i],4)
     return delW
 
 #separa csv em dois arrays, a = input, target = target.
