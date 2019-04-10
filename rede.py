@@ -2,50 +2,109 @@ import math
 import numpy as np
 import pandas as pd
 
-qtInter = 100
-qtOut = 10
-alpha = 0.5
-v = np.round(np.random.uniform(-1,1,(784,qtInter)),4)
-w = np.round(np.random.uniform(-1,1,(qtInter,10)),4)
-df = pd.read_csv('mnist_test.csv')
-delK = np.zeros(qtOut)
-inDel = np.zeros(qtInter)
-delX = np.zeros(qtInter)
-target = np.zeros(qtOut)
+qtInter,qtOut,qtInput,e,alpha,epoca = 100,10,784,0,0.1,0
 
-epoca = 0
-erros=[]
+dataset = pd.read_csv('mnist_train.csv')
+epoca=0
+#v = np.random.uniform(-1,1,(qtInput,qtInter))
+#w = np.random.uniform(-1,1,(qtInter,qtOut))
+v = np.random.randn(qtInput, qtInter) / np.sqrt(qtInput)
+w = np.random.randn(qtInter, qtOut) / np.sqrt(qtInter)
 
-def trataTarget(t) :
-    retTarget = np.zeros(qtOut)
-    if   (t == 0) : retTarget = [1,0,0,0,0,0,0,0,0,0]
-    elif (t == 1) : retTarget = [0,1,0,0,0,0,0,0,0,0]
-    elif (t == 2) : retTarget = [0,0,1,0,0,0,0,0,0,0]
-    elif (t == 3) : retTarget = [0,0,0,1,0,0,0,0,0,0]
-    elif (t == 4) : retTarget = [0,0,0,0,1,0,0,0,0,0]
-    elif (t == 5) : retTarget = [0,0,0,0,0,1,0,0,0,0]
-    elif (t == 6) : retTarget = [0,0,0,0,0,0,1,0,0,0]
-    elif (t == 7) : retTarget = [0,0,0,0,0,0,0,1,0,0]
-    elif (t == 8) : retTarget = [0,0,0,0,0,0,0,0,1,0]
-    elif (t == 9) : retTarget = [0,0,0,0,0,0,0,0,0,1]
+def algoritmo(isTreino,qtEpoca):
+    global epoca
+    for i in range (qtEpoca):
+        readLine(dataset,isTreino)
+        epoca+=1
+        
+def readLine(dSet,isTreino):
+    global e
+    r = 1
+    e = 0
+    for row in dSet.itertuples(index=False):
+        linha = list(row)
+        target = targetVetor(linha.pop(0))
+        linha = trataLinha(linha)
+        forward(linha,isTreino,target,r)
+        r+=1
+
+def forward(linha,isTreino,target,r):
+    global e
+    inZ = inputZ(linha)
+    Z = funcAtivacao(inZ,'relu')
+    inY = inputY(Z,w)
+    Y = funcAtivacao(inY,'relu')
+    print (target)
+    print (Y)
+    if isTreino:
+        if (not verificaAcerto(target,Y)):
+            e+=1
+            backPropagation(inZ,Z,inY,Y,target,linha)
+    print (f'Linha: {r} Epoca: {epoca}')
+    print (f'Erros: {e}')
+    print (' _____________________________________')
+    
+def backPropagation(inZ,Z,inY,Y,target,linha):
+    delK =[]
+    inJ  =[]
+    delJ =[]
+    delK = deltaK(target,Y,inY,'relu') 
+    inJ  = deltainJ(delK,w)
+    delJ = deltaJ(inJ,inZ,'relu')
+    atualizaPesos(delK,Z,linha,delJ)
+    
+def trataLinha(inp):
+    for i in range(len(inp)):
+        if (inp[i]>0):
+            inp[i] = inp[i]/255
+        else:
+            inp[i] = inp[i]
+    return inp
+
+def targetVetor(labels, num_classes=10):
+    retTarget = np.eye(num_classes)[labels]
     return retTarget
 
-def forward (inp, pesos) :
-    soma =0
-    qtInput = len(inp)
-    inX = np.zeros(np.size(pesos,axis=1))
-    for j in range (np.size(pesos,axis=1)):
-        for i in range (qtInput):
-            soma +=(inp[i]) * pesos[i][j]
-        inX[j] = soma
-        soma =0
+def inputZ(inp):
+    inX = np.zeros(qtInter)
+    for j in range (qtInter):
+        inX[j] = np.sum(inp * np.array(v[:,j]))
     return inX
 
-def hiperbolica(x):
-    hip = np.zeros(len(x))
-    for i in range(len(x)):
-        hip[i] = ((np.exp(x[i]) - np.exp(-x[i])) / (np.exp(x[i]) + np.exp(-x[i])))
-    return hip
+def inputY(inp,pesos):
+    inX = np.zeros(qtOut)
+    for k in range (qtOut):
+        inX[k] = np.sum(inp * np.array(pesos[:,k]))
+    return inX
+
+def deltainJ (dK,peso):
+    inJ = np.zeros(qtInter)
+    for j in range (qtInter):
+        for k in range (qtOut):
+            inJ[j] += dK[k] * peso[j][k]
+    return inJ
+
+def corrigePeso(peso,delta):
+    return np.add(peso,delta)
+
+def funcAtivacao(x,func) :
+    if (func == 'relu') : 
+        return np.maximum(x,0) 
+    elif (func == 'sig') : 
+        return sigmoide(x)
+    else: 
+        print('parametro invalido!')
+
+def derivada(x,func):        
+    if (func == 'relu') : 
+        return derivRelu(x) 
+    elif (func == 'sig') : 
+        return derivSig(x)
+    else: 
+        print('parametro invalido!')
+        
+def tanh(x):
+    return np.sinh(x) / np.cosh(x)
 
 def sigmoide(x):
     sig = np.zeros(len(x))
@@ -53,117 +112,70 @@ def sigmoide(x):
         sig[i] = (1/1+ np.exp(-x[i]))
     return sig
 
-def softmax(x):
-    smax = np.exp(x - np.max(x))
-    return smax / smax.sum()
-
-def funcAtivacao(x,func) :
-    if (func == 'relu') : 
-        return np.maximum(x,0) 
-    elif (func == 'sig') : 
-        return sigmoide(x) 
-    elif (func == 'hip') : 
-        return hiperbolica(x)
-    elif (func == 'softmax'):
-        return softmax(x)
-    else: 
-        print('parametro invalido!')
-
-def deltaK(targetK,Yk,YinK) :
-    dK = np.zeros(qtOut)
-    for i in range (qtOut) :
-        erro = targetK[i] - Yk[i]
-        deriv = YinK[i] * (1 - YinK[i])
-        dK[i] = erro * deriv
-    return dK
-
-def deltaW(dK,Ze):
-    delW = np.zeros((qtInter,qtOut))
-    for j in range(qtInter):
-        for k in range(qtOut):
-            delW[j][k] = alpha * delK[k] * Ze[j]
-    return delW
-
-def deltainJ (dK,peso):
-    inJ = np.zeros(qtInter)
-    for k in range (qtOut) :
-        for j in range (qtInter):
-            inJ[j] += delK[k] * w[j][k]
-    return inJ
-
-def deltaJ(inJ,inZ):
-    delJ = np.zeros(qtInter)
-    for j in range (qtInter):
-        deriv = inZ[j] * (1 - inZ[j])
-        delJ[j] = inJ[j] * deriv
-    return delJ
-
-def deltaV(linha,delJ):
-    qtInput = len(linha)
-    delV = np.zeros((qtInput,qtInter))
-    for i in range(qtInput):
-        for j in range (qtInter):
-            delV[i][j] = alpha * delJ[j] * linha[i]
-    return delV
-
-def trataInput(inp,limiar):
-    for i in range(len(inp)) :
-        if (inp[i]>limiar):
-            inp[i] = 1
-        else: 
-            inp[i] = 0
-    return inp
-
-def trata255(inp):
-    for i in range(len(inp)):
-        if (inp[i]>0):
-            inp[i] = round(inp[i]/255,5)
-        else:
-            inp[i] = inp[i]
-    return inp
-
-def validaSaida(tar,out):
+def verificaAcerto(tar,out):
     for i in range (qtOut):
         if (tar[i] != out[i]):
             return False
     return True
 
-def backprop (treino,ep):
-    global epoca
-    global erros
+def deltaK(targetK,Yk,YinK,func) :
+    dK = np.zeros(qtOut)
+    for i in range (qtOut) :
+        erro = targetK[i] - Yk[i]
+        deriv = derivada(YinK[i],func)
+        dK[i] = erro * deriv
+    return dK
 
-    for e in range (ep):
-        global err
-        global v
-        global w
-        err = 0
-        i = 0
-        for row in df.itertuples(index=False):
-            linha = list(row) #linha = trataInput(linha) #linha = trata255(linha)
-            tar = linha.pop(0)
-            linha = trata255(linha)
-            target = trataTarget(tar)
-            inZ = forward(linha,v)
-            Z = funcAtivacao(inZ,'relu')
-            inY = forward(Z,w)
-            Y = funcAtivacao(inY,'hip')
-            i+=1
-            if treino:
-                acertou = validaSaida(target,Y)
-                if (not acertou):
-                    err+=1
-                    delK = deltaK(target,Y,inY)
-                    inJ = deltainJ(delK,w)
-                    delJ = deltaJ(inJ,inZ)
-                    w = deltaW(delK,Z)
-                    v = deltaV(linha,delJ)
-            print (f'ja foram {i} linhas da epoca {epoca}')
-            #print (f'V: {v}')
-            #print (f'W: {w}')
-            print(f'Y:{Y}')
-            print (f'erros: {err}')
-            #break
-        erros.append(err)
-        epoca +=1
-        
- backprop(True,1)
+def deltaJ(inJ,inZ,func):
+    delJ = np.zeros(qtInter)
+    for j in range (qtInter):
+        deriv = derivada(inZ[j],func)
+        delJ[j] = inJ[j] * deriv
+    return delJ
+
+def atualizaPesos(delK,Z,linha,delJ):
+    global w
+    global v
+    correcaoW = deltaW(delK,Z)
+    correcaoV = deltaV(linha,delJ)
+    w = corrigePeso(w,correcaoW)
+    v = corrigePeso(v,correcaoV)
+
+def deltaW(dK,Ze):
+    dW = np.array([[0]*qtInter])
+    first = True
+    for i in range(qtOut):
+        if first:
+            dW[i] = alpha * (Ze * dK[i])
+            first = False
+        else:
+            np.append(dW,(alpha * Ze * dK[i]))
+    return dW.T    
+#
+#def deltaV(linha,dJ):
+#    dV = np.array([[0]*qtInput],float)
+#    nplinha = np.empty_like(linha)
+#    nplinha = np.add(nplinha,linha)
+#    first = True
+#    for i in range(qtInter):
+#       if first:
+#            dV[i] = alpha * nplinha * dJ[i]
+#            first = False
+#        else:
+#            np.append(dV,(alpha * nplinha * dJ[i]))
+#    return dV.T 
+
+def deltaV(linha,dJ):
+    dV = np.zeros((qtInput,qtInter))
+    for i in range(qtInput):
+        for j in range (qtInter):
+            dV[i][j] = alpha * dJ[j] * linha[i]
+    return dV
+    
+def derivRelu(x):
+    if (x<0):
+        return 0
+    elif (x>=0):
+        return 1
+
+algoritmo(True,10)
