@@ -3,11 +3,8 @@ import numpy as np
 import pandas as pd
 
 qtInter,qtOut,qtInput,e,alpha,epoca = 100,10,784,0,0.1,0
-
-dataset = pd.read_csv('mnist_train.csv')
+dataset = pd.read_csv('mnist_test.csv')
 epoca=0
-#v = np.random.uniform(-1,1,(qtInput,qtInter))
-#w = np.random.uniform(-1,1,(qtInter,qtOut))
 v = np.random.randn(qtInput, qtInter) / np.sqrt(qtInput)
 w = np.random.randn(qtInter, qtOut) / np.sqrt(qtInter)
 
@@ -27,7 +24,7 @@ def readLine(dSet,isTreino):
         linha = trataLinha(linha)
         forward(linha,isTreino,target,r)
         r+=1
-
+        
 def forward(linha,isTreino,target,r):
     global e
     inZ = inputZ(linha)
@@ -45,21 +42,15 @@ def forward(linha,isTreino,target,r):
     print (' _____________________________________')
     
 def backPropagation(inZ,Z,inY,Y,target,linha):
-    delK =[]
-    inJ  =[]
-    delJ =[]
+    delK,inJ,delJ =[],[],[]
     delK = deltaK(target,Y,inY,'relu') 
     inJ  = deltainJ(delK,w)
     delJ = deltaJ(inJ,inZ,'relu')
     atualizaPesos(delK,Z,linha,delJ)
     
 def trataLinha(inp):
-    for i in range(len(inp)):
-        if (inp[i]>0):
-            inp[i] = inp[i]/255
-        else:
-            inp[i] = inp[i]
-    return inp
+    retorno = np.array(inp)
+    return retorno/255
 
 def targetVetor(labels, num_classes=10):
     retTarget = np.eye(num_classes)[labels]
@@ -91,26 +82,13 @@ def funcAtivacao(x,func) :
     if (func == 'relu') : 
         return np.maximum(x,0) 
     elif (func == 'sig') : 
-        return sigmoide(x)
-    else: 
-        print('parametro invalido!')
+        return (1/(1+np.exp(-x)))
 
 def derivada(x,func):        
     if (func == 'relu') : 
         return derivRelu(x) 
     elif (func == 'sig') : 
-        return derivSig(x)
-    else: 
-        print('parametro invalido!')
-        
-def tanh(x):
-    return np.sinh(x) / np.cosh(x)
-
-def sigmoide(x):
-    sig = np.zeros(len(x))
-    for i in range(len(x)):
-        sig[i] = (1/1+ np.exp(-x[i]))
-    return sig
+        return (x * (1 - x))
 
 def verificaAcerto(tar,out):
     for i in range (qtOut):
@@ -142,40 +120,20 @@ def atualizaPesos(delK,Z,linha,delJ):
     v = corrigePeso(v,correcaoV)
 
 def deltaW(dK,Ze):
-    dW = np.array([[0]*qtInter])
-    first = True
-    for i in range(qtOut):
-        if first:
-            dW[i] = alpha * (Ze * dK[i])
-            first = False
-        else:
-            np.append(dW,(alpha * Ze * dK[i]))
-    return dW.T    
-#
-#def deltaV(linha,dJ):
-#    dV = np.array([[0]*qtInput],float)
-#    nplinha = np.empty_like(linha)
-#    nplinha = np.add(nplinha,linha)
-#    first = True
-#    for i in range(qtInter):
-#       if first:
-#            dV[i] = alpha * nplinha * dJ[i]
-#            first = False
-#        else:
-#            np.append(dV,(alpha * nplinha * dJ[i]))
-#    return dV.T 
+    dW = np.empty_like(w)
+    for j in range(qtInter):
+        for k in range(qtOut):
+            dW[j][k] = alpha * dK[k] * Ze[j]
+    return dW
 
 def deltaV(linha,dJ):
-    dV = np.zeros((qtInput,qtInter))
+    dV = np.empty_like(v)
     for i in range(qtInput):
         for j in range (qtInter):
             dV[i][j] = alpha * dJ[j] * linha[i]
     return dV
     
 def derivRelu(x):
-    if (x<0):
-        return 0
-    elif (x>=0):
-        return 1
+    return 0 if x<0 else 1
 
-algoritmo(True,10)
+algoritmo(True,2)
