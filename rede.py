@@ -1,10 +1,8 @@
-import math
 import numpy as np
 import pandas as pd
 
 qtInter,qtOut,qtInput,e,alpha,epoca = 100,10,784,0,0.1,0
 dataset = pd.read_csv('mnist_test.csv')
-epoca=0
 v = np.random.randn(qtInput, qtInter) / np.sqrt(qtInput)
 w = np.random.randn(qtInter, qtOut) / np.sqrt(qtInter)
 
@@ -16,8 +14,7 @@ def algoritmo(isTreino,qtEpoca):
         
 def readLine(dSet,isTreino):
     global e
-    r = 1
-    e = 0
+    r,e = 1,0
     for row in dSet.itertuples(index=False):
         linha = list(row)
         target = targetVetor(linha.pop(0))
@@ -37,9 +34,7 @@ def forward(linha,isTreino,target,r):
         if (not verificaAcerto(target,Y)):
             e+=1
             backPropagation(inZ,Z,inY,Y,target,linha)
-    print (f'Linha: {r} Epoca: {epoca}')
-    print (f'Erros: {e}')
-    print (' _____________________________________')
+    print (f'Linha: {r} Epoca: {epoca} Erros: {e} ______________')
     
 def backPropagation(inZ,Z,inY,Y,target,linha):
     delK,inJ,delJ =[],[],[]
