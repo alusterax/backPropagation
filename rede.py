@@ -1,58 +1,15 @@
+import time
 import numpy as np
 import pandas as pd
 
 qtInter,qtOut,qtInput,e,alpha,epoca = 100,10,784,0,0.1,0
-dataset = pd.read_csv('mnist_test.csv')
+dataset = pd.read_csv('mnist_train.csv')
 v = np.random.randn(qtInput, qtInter) / np.sqrt(qtInput)
 w = np.random.randn(qtInter, qtOut) / np.sqrt(qtInter)
+ativacao = 'sig'
 
-def algoritmo(isTreino,qtEpoca):
-    global epoca
-    for i in range (qtEpoca):
-        readLine(dataset,isTreino)
-        epoca+=1
-        
-def readLine(dSet,isTreino):
-    global e
-    r,e = 1,0
-    for row in dSet.itertuples(index=False):
-        linha = list(row)
-        target = targetVetor(linha.pop(0))
-        linha = trataLinha(linha)
-        forward(linha,isTreino,target,r)
-        r+=1
-        
-def forward(linha,isTreino,target,r):
-    global e
-    inZ = inputZ(linha)
-    Z = funcAtivacao(inZ,'relu')
-    inY = inputY(Z,w)
-    Y = funcAtivacao(inY,'relu')
-    print (target)
-    print (Y)
-    if isTreino:
-        if (not verificaAcerto(target,Y)):
-            e+=1
-            backPropagation(inZ,Z,inY,Y,target,linha)
-    print (f'Linha: {r} Epoca: {epoca} Erros: {e}' + '\n' + '_____________________')
-    
-def backPropagation(inZ,Z,inY,Y,target,linha):
-    delK,inJ,delJ =[],[],[]
-    delK = deltaK(target,Y,inY,'relu') 
-    inJ  = deltainJ(delK,w)
-    delJ = deltaJ(inJ,inZ,'relu')
-    atualizaPesos(delK,Z,linha,delJ)
-    
-def atualizaPesos(delK,Z,linha,delJ):
-    global w
-    global v
-    correcaoW = deltaW(delK,Z)
-    correcaoV = deltaV(linha,delJ)
-    w = corrigePeso(w,correcaoW)
-    v = corrigePeso(v,correcaoV)
-    
-def corrigePeso(peso,delta):
-    return np.add(peso,delta)
+#testar
+#dataset = pd.read_csv('mnist_test.csv')
 
 def trataLinha(inp):
     retorno = np.array(inp)
@@ -86,18 +43,24 @@ def funcAtivacao(x,func) :
         return np.maximum(x,0) 
     elif (func == 'sig') : 
         return (1/(1+np.exp(-x)))
+    elif (func == 'tanh'):
+        return np.tanh(x)
 
 def derivada(x,func):        
     if (func == 'relu') : 
         return (0 if x<0 else 1)
     elif (func == 'sig') : 
         return (x * (1 - x))
+    elif (func == 'tanh') :
+        return (1 - np.power(x,2))
 
 def verificaAcerto(tar,out):
-    for i in range (qtOut):
-        if (tar[i] != out[i]):
-            return False
-    return True
+    indTar = np.unravel_index(np.argmax(tar, axis=None), tar.shape)
+    indOut = np.unravel_index(np.argmax(out, axis=None), out.shape)
+    if (indTar == indOut):
+        return True
+    else :
+        return False
 
 def deltaK(targetK,Yk,YinK,func) :
     dK = np.zeros(qtOut)
@@ -128,4 +91,53 @@ def deltaV(linha,dJ):
             dV[i][j] = alpha * dJ[j] * linha[i]
     return dV
 
-algoritmo(True,2)
+def algoritmo(isTreino,qtEpoca):
+    global epoca
+    for i in range (qtEpoca):
+        readLine(dataset,isTreino)
+        epoca+=1
+        
+def readLine(dSet,isTreino):
+    global e
+    r,e = 1,0
+    for row in dSet.itertuples(index=False):
+        linha = list(row)
+        target = targetVetor(linha.pop(0))
+        linha = trataLinha(linha)
+        forward(linha,isTreino,target,r)
+        r+=1
+        
+def forward(linha,isTreino,target,r):
+    global e
+    inZ = inputZ(linha)
+    Z = funcAtivacao(inZ,ativacao)
+    inY = inputY(Z,w)
+    Y = funcAtivacao(inY,ativacao)
+    print (target)
+    print (Y)
+    if isTreino:
+        if (not verificaAcerto(target,Y)):
+            e+=1
+        backPropagation(inZ,Z,inY,Y,target,linha)
+    a = 100 - ((e/r)*100)
+    print (f'Linha: {r} Epoca: {epoca} Erros: {e}  Acerto: {a} %' + '\n' + '_________' )
+    
+def backPropagation(inZ,Z,inY,Y,target,linha):
+    delK,inJ,delJ =[],[],[]
+    delK = deltaK(target,Y,Y,ativacao) 
+    inJ  = deltainJ(delK,w)
+    delJ = deltaJ(inJ,Z,ativacao)
+    atualizaPesos(delK,Z,linha,delJ)
+    
+def atualizaPesos(delK,Z,linha,delJ):
+    global w
+    global v
+    correcaoW = deltaW(delK,Z)
+    correcaoV = deltaV(linha,delJ)
+    w = corrigePeso(w,correcaoW)
+    v = corrigePeso(v,correcaoV)
+    
+def corrigePeso(peso,delta):
+    return np.add(peso,delta)
+
+algoritmo(True,1)
