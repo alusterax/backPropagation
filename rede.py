@@ -34,7 +34,7 @@ def forward(linha,isTreino,target,r):
         if (not verificaAcerto(target,Y)):
             e+=1
             backPropagation(inZ,Z,inY,Y,target,linha)
-    print (f'Linha: {r} Epoca: {epoca} Erros: {e} ______________')
+    print (f'Linha: {r} Epoca: {epoca} Erros: {e}' + '\n' + '_____________________')
     
 def backPropagation(inZ,Z,inY,Y,target,linha):
     delK,inJ,delJ =[],[],[]
@@ -43,6 +43,17 @@ def backPropagation(inZ,Z,inY,Y,target,linha):
     delJ = deltaJ(inJ,inZ,'relu')
     atualizaPesos(delK,Z,linha,delJ)
     
+def atualizaPesos(delK,Z,linha,delJ):
+    global w
+    global v
+    correcaoW = deltaW(delK,Z)
+    correcaoV = deltaV(linha,delJ)
+    w = corrigePeso(w,correcaoW)
+    v = corrigePeso(v,correcaoV)
+    
+def corrigePeso(peso,delta):
+    return np.add(peso,delta)
+
 def trataLinha(inp):
     retorno = np.array(inp)
     return retorno/255
@@ -70,9 +81,6 @@ def deltainJ (dK,peso):
             inJ[j] += dK[k] * peso[j][k]
     return inJ
 
-def corrigePeso(peso,delta):
-    return np.add(peso,delta)
-
 def funcAtivacao(x,func) :
     if (func == 'relu') : 
         return np.maximum(x,0) 
@@ -81,7 +89,7 @@ def funcAtivacao(x,func) :
 
 def derivada(x,func):        
     if (func == 'relu') : 
-        return derivRelu(x) 
+        return (0 if x<0 else 1)
     elif (func == 'sig') : 
         return (x * (1 - x))
 
@@ -106,14 +114,6 @@ def deltaJ(inJ,inZ,func):
         delJ[j] = inJ[j] * deriv
     return delJ
 
-def atualizaPesos(delK,Z,linha,delJ):
-    global w
-    global v
-    correcaoW = deltaW(delK,Z)
-    correcaoV = deltaV(linha,delJ)
-    w = corrigePeso(w,correcaoW)
-    v = corrigePeso(v,correcaoV)
-
 def deltaW(dK,Ze):
     dW = np.empty_like(w)
     for j in range(qtInter):
@@ -127,8 +127,5 @@ def deltaV(linha,dJ):
         for j in range (qtInter):
             dV[i][j] = alpha * dJ[j] * linha[i]
     return dV
-    
-def derivRelu(x):
-    return 0 if x<0 else 1
 
 algoritmo(True,2)
